@@ -33,6 +33,7 @@ class BaseRegistry:
     job_class = Job
     death_penalty_class = UnixSignalDeathPenalty
     key_template = 'rq:registry:{0}'
+    key_last_cleanup_template = 'rq:registry:cleanup:{0}'
 
     def __init__(
         self,
@@ -53,6 +54,7 @@ class BaseRegistry:
             self.serializer = resolve_serializer(serializer)
 
         self.key = self.key_template.format(self.name)
+        self.last_cleanup_key = self.key_last_cleanup_template.format(self.name)
         self.job_class = backend_class(self, 'job_class', override=job_class)
         self.death_penalty_class = backend_class(self, 'death_penalty_class', override=death_penalty_class)
 
@@ -83,6 +85,13 @@ class BaseRegistry:
             job_id = item.id
         return self.connection.zscore(self.key, job_id) is not None
 
+    def _maybe_cleanup(self):
+        last_cleanup_timestamp = self.connection.get(self.last_cleanup_key)
+        # we don't care about concurrency here, if we cleanup twice it's not a big deal
+        if last_cleanup_timestamp is None or last_cleanup_timestamp < current_timestamp() - 10:
+            self.connection.set(self.last_cleanup_key, current_timestamp())
+            self.cleanup()
+
     @property
     def count(self) -> int:
         """Returns the number of jobs in this registry
@@ -97,7 +106,7 @@ class BaseRegistry:
         Returns:
             int: _description_
         """
-        self.cleanup()
+        self._maybe_cleanup()
         return self.connection.zcard(self.key)
 
     def add(self, job: 'Job', ttl=0, pipeline: Optional['Pipeline'] = None, xx: bool = False) -> int:
@@ -160,7 +169,7 @@ class BaseRegistry:
         Returns:
             _type_: _description_
         """
-        self.cleanup()
+        self._maybe_cleanup()
         return [as_text(job_id) for job_id in self.connection.zrange(self.key, start, end)]
 
     def get_queue(self):
