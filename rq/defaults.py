@@ -96,6 +96,13 @@ Defaults to the `UnixSignalDeathPenalty` class within the `rq.timeouts` module
 """
 
 
+DEFAULT_MAX_MEMORY = 4 * 1024 * 1024 * 1024
+""" The default maximum memory in bytes for work horse processes.
+Defaults to 4 GB. Work horses exceeding this limit will be killed.
+Set to None to disable memory monitoring.
+"""
+
+
 UNSERIALIZABLE_RETURN_VALUE_PAYLOAD = 'Unserializable return value'
 """ The value that we store in the job's _result property or in the Result's return_value
 in case the return value of the actual job is not serializable
