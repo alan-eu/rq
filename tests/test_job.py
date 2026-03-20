@@ -198,6 +198,19 @@ class TestJob(RQTestCase):
         jobs = Job.fetch_many([job.id, job2.id, 'invalid_id'], self.testconn)
         self.assertEqual(jobs, [job, job2, None])
 
+    def test_fetch_many_corrupted_job(self):
+        """Corrupted jobs (missing data key) should return None, not crash."""
+        job = Job.create(func=fixtures.some_calculation, args=(3, 4), kwargs=dict(z=2), connection=self.testconn)
+        job.save()
+
+        corrupted_id = "corrupted-job"
+        self.testconn.hset(Job.key_for(corrupted_id), "status", "scheduled")
+
+        jobs = Job.fetch_many([corrupted_id, job.id], self.testconn)
+        self.assertEqual(len(jobs), 2)
+        self.assertIsNone(jobs[0])
+        self.assertEqual(jobs[1], job)
+
     def test_persistence_of_empty_jobs(self):  # noqa
         """Storing empty jobs."""
         job = Job()
