@@ -645,8 +645,13 @@ class Job:
                 jobs.append(None)
                 continue
 
-            job = cls(job_id, connection=connection, serializer=serializer)
-            job.restore(results[i])
+            job = None
+            try:
+                job = cls(job_id, connection=connection, serializer=serializer)
+                job.restore(results[i])
+            except Exception:
+                logger.error("RQ Scheduler Error: corrupted job %s in fetch_many, skipping. Raw keys: %s",
+                             job_id, list(results[i].keys()), exc_info=True)
             jobs.append(job)
 
         return jobs
