@@ -274,7 +274,7 @@ class StartedJobRegistry(BaseRegistry):
 
                     # we did a job fetch so the meta is supposed to be there
                     if job.meta:
-                        if ret := job.meta.get('_retried_after_abandonned', 0) < MAX_RETRIES_AFTER_ABANDONED:
+                        if (ret := job.meta.get('_retried_after_abandonned', 0)) < MAX_RETRIES_AFTER_ABANDONED:
                             job.meta['_retried_after_abandonned'] = ret + 1
                             job.retries_left = (getattr(job, 'retries_left', 0) or 0) + 1
                         else :
